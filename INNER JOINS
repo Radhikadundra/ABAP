@@ -1,0 +1,67 @@
+REPORT ZSHR_JIONS_1.
+
+DATA v_kunnr TYPE kna1-kunnr.
+SELECT-OPTIONS so_kunnr FOR v_kunnr DEFAULT '1' TO '582'.
+
+TYPES: BEGIN OF ty_customer_sales,
+           kunnr TYPE kna1-kunnr,
+           ort01 TYPE kna1-ort01,
+           vbeln TYPE vbak-vbeln,
+           erdat TYPE vbak-erdat,
+           erzet TYPE vbak-erzet,
+     END OF ty_customer_sales.
+
+DATA: lt_customer_sales TYPE TABLE OF ty_customer_sales,
+      wa_customer_sales TYPE  ty_customer_sales.
+
+DATA v_ort01 TYPE kna1-ort01.
+
+START-OF-SELECTION.
+  PERFORM get_customer_sales.
+   IF lt_customer_sales IS NOT INITIAL.
+     PERFORM display_customer_sales.
+   ELSE.
+     MESSAGE 'no customer sales' TYPE 'I'.
+   ENDIF.
+
+FORM get_customer_sales.
+  SELECT kna1~kunnr ort01
+         vbeln VBAK~erdat erzet
+         FROM kna1 INNER JOIN vbak            "WE CAN USE BOTH 'inner join' AND 'left outer join'.
+            ON kna1~kunnr = vbak~kunnr
+          INTO TABLE lt_customer_sales
+          WHERE kna1~kunnr in so_kunnr.
+ENDFORM.
+
+FORM display_customer_sales.
+ SORT lt_customer_sales BY KUNNR.
+  LOOP AT lt_customer_sales INTO wa_customer_sales.
+*    AT NEW kunnr.
+*     FORMAT COLOR 3.
+*      WRITE: /'customer num:', wa_customer_sales-kunnr,
+*             'customer city' , wa_customer_sales-ort01.      "city name didn't display in the lps. 2 ways to display
+*      FORMAT COLOR OFF.
+*    endat.
+
+* 1-way: DECLARE VARIABLE AND USE  OTHER ONE IS 'on change of' event.
+*    CLEAR v_ort01.
+*    v_ort01 = wa_customer_sales-ort01.
+*    AT NEW kunnr.
+*     FORMAT COLOR 3.
+*      WRITE: /'customer num:', wa_customer_sales-kunnr,
+*             'customer city' , v_ort01.
+*      FORMAT COLOR OFF.
+*    endat.
+    ON CHANGE OF wa_customer_sales-kunnr.
+      FORMAT COLOR 3.
+      WRITE: /'customer num:', wa_customer_sales-kunnr,
+             'customer city' ,wa_customer_sales-ORT01 .
+      FORMAT COLOR OFF.
+    ENDON.
+    FORMAT COLOR 1.
+     write:/ wa_customer_sales-vbeln,
+             wa_customer_sales-erdat,
+             wa_customer_sales-erzet.
+    FORMAT COLOR OFF.
+  ENDLOOP.
+ENDFORM.
